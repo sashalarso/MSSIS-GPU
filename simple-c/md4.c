@@ -23,6 +23,7 @@
 
 #include "md4.h"
 #include <string.h>
+#include <stdio.h>
 
 /*
  * The basic MD4 functions.
@@ -70,13 +71,22 @@
  * This processes one or more 64-byte data blocks, but does NOT update
  * the bit counters.  There are no alignment requirements.
  */
+void print_hexa(const unsigned char *data, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        printf("%02x", data[i]);
+    }
+    printf("\n");
+}
 static const void *body(MD4_CTX *ctx, const void *data, unsigned long size)
 {
+	
 	unsigned const char *ptr;
 	MD4_u32plus a, b, c, d;
 	MD4_u32plus saved_a, saved_b, saved_c, saved_d;
+	
 
 	ptr = data;
+	
 
 	a = ctx->A;
 	b = ctx->B;
@@ -149,6 +159,7 @@ static const void *body(MD4_CTX *ctx, const void *data, unsigned long size)
 		d += saved_d;
 
 		ptr += 64;
+		
 	} while (size -= 64);
 
 	ctx->A = a;
@@ -156,6 +167,7 @@ static const void *body(MD4_CTX *ctx, const void *data, unsigned long size)
 	ctx->C = c;
 	ctx->D = d;
 
+	
 	return ptr;
 }
 
@@ -174,14 +186,14 @@ void MD4_Update(MD4_CTX *ctx, const void *data, unsigned long size)
 {
 	MD4_u32plus saved_lo;
 	unsigned long used, free;
-
+	
 	saved_lo = ctx->lo;
 	if ((ctx->lo = (saved_lo + size) & 0x1fffffff) < saved_lo)
 		ctx->hi++;
 	ctx->hi += size >> 29;
-
+	
 	used = saved_lo & 0x3f;
-
+	
 	if (used) {
 		free = 64 - used;
 
@@ -193,19 +205,24 @@ void MD4_Update(MD4_CTX *ctx, const void *data, unsigned long size)
 		memcpy(&ctx->buffer[used], data, free);
 		data = (unsigned char *)data + free;
 		size -= free;
+		
 		body(ctx, ctx->buffer, 64);
+		
 	}
 
 	if (size >= 64) {
+		
 		data = body(ctx, data, size & ~(unsigned long)0x3f);
 		size &= 0x3f;
 	}
-
+	
 	memcpy(ctx->buffer, data, size);
+	
 }
 
 void MD4_Final(unsigned char *result, MD4_CTX *ctx)
 {
+	
 	unsigned long used, free;
 
 	used = ctx->lo & 0x3f;
@@ -216,6 +233,7 @@ void MD4_Final(unsigned char *result, MD4_CTX *ctx)
 
 	if (free < 8) {
 		memset(&ctx->buffer[used], 0, free);
+		
 		body(ctx, ctx->buffer, 64);
 		used = 0;
 		free = 64;
@@ -233,7 +251,9 @@ void MD4_Final(unsigned char *result, MD4_CTX *ctx)
 	ctx->buffer[62] = ctx->hi >> 16;
 	ctx->buffer[63] = ctx->hi >> 24;
 
+	
 	body(ctx, ctx->buffer, 64);
+	
 
 	result[0] = ctx->A;
 	result[1] = ctx->A >> 8;
