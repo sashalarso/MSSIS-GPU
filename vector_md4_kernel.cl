@@ -164,15 +164,16 @@ __kernel void md4_crack(__global const unsigned int *target,
     buffer[56] = PWD_LEN * 8;
     //  contenu du buffer (en hexadécimal)
     
+    
     do
     {
-      uint res[16];
+      uint res[4];
       mybody(buffer, res);
       // my_memcmp pour remplacer memcmp
-      if (my_memcmp(res, target, sizeof(res)) == 0) {
-          printf("found: %s\n", buffer);
+      if (my_memcmp(res, target, 16) == 0) {
+          //printf("%s\n", buffer);
+          for (int i = 0; i < PWD_LEN; ++i)  solution[i] = ((unsigned char*)buffer)[i];
       }
-
     } while (incr_candidate(buffer));
   }
   
