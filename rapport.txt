@@ -1,0 +1,21 @@
+Partie Simple-C:
+
+J'ai construit un buffer de 64 octets que j'envoie directement dans la fonction de hashage.
+J'ai supprimé les 3 fonctions init, update et final pour tout mettre dans une fonction body.
+J'ai également supprimé les GET et les SET dans l'appel de STEP ce qui a permis un gain de performance
+d'environ 20%.
+
+Partie GPU:
+
+J'ai modifié la fonction incr_candidate pour seulement modifier les caractères 4 à PWD_LEN.
+Les 3 premiers caractères sont définis par des opérations modulo grâce à l'id, ainsi on est surs
+que chaque processus aura une combinaison unique de 3 lettres.
+Ensuite on itère classiquement jusqu'à trouver une correspondance et charger celle-ci dans une variable
+attendue par main.c.
+
+Partie SIMD:
+
+J'ai construit cette fois-ci 4 buffers de 64 octets que je stocke dans un tableau que j'envoie dans
+la fonction de hashage. Ensuite chaque buffer est découpé en 16 parties, chaque partie va dans un
+registre __em128i qui contient 4 valeurs : la valeur des n octets de chaque buffer ce qui permet 
+d'effectuer les opérations 4 à 4.
