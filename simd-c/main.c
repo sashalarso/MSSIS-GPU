@@ -14,14 +14,24 @@
 #define STEP(f, a, b, c, d, x, add, s)      \
   (a) += f((b), (c), (d)) + ptr[x] + (add); \
   (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s))));
+  
+#define STEP1(f,a,b,c,d)   \
+  (a) =_mm_add_epi32((a),f((b), (c), (d)));
+#define STEP2(a,add)   \
+  (a) =_mm_add_epi32((a),_mm_set1_epi32(add)); 
+#define STEP3(a,x) \
+  __m128i xs=_mm_set1_epi32(ptr[0][x],ptr[1][x],ptr[2][x],ptr[3][x]);   \
+  (a) =_mm_add_epi32((a),(xs));
+  	
 
-void mybody(unsigned char *buffer, unsigned char *result)
+void mybody(unsigned char **buffer, unsigned char *result)
 {
-    uint32_t a = 0x67452301;
-  uint32_t b = 0xefcdab89;
-  uint32_t c = 0x98badcfe;
-  uint32_t d = 0x10325476;
-  uint32_t *ptr = buffer;
+    __m128i a = _mm_set1_epi32(0x67452301);
+    __m128i b = _mm_set1_epi32(0xefcdab89);
+    __m128i c = _mm_set1_epi32(0x98badcfe);
+    __m128i d = _mm_set1_epi32(0x10325476);
+    
+   uint32_t **ptr = buffer;
   STEP(F, a, b, c, d, 0, 0, 3)
   STEP(F, d, a, b, c, 1, 0, 7)
   STEP(F, c, d, a, b, 2, 0, 11)
@@ -74,26 +84,31 @@ void mybody(unsigned char *buffer, unsigned char *result)
   STEP(H2, d, a, b, c, 11, 0x6ed9eba1, 9)
   STEP(H, c, d, a, b, 7, 0x6ed9eba1, 11)
   STEP(H2, b, c, d, a, 15, 0x6ed9eba1, 15)
-  a += 0x67452301;
-  b += 0xefcdab89;
-  c += 0x98badcfe;
-  d += 0x10325476;
-  result[0] = a;
-	result[1] = a >> 8;
-	result[2] = a >> 16;
-	result[3] = a >> 24;
-	result[4] = b;
-	result[5] = b >> 8;
-	result[6] = b >> 16;
-	result[7] = b >> 24;
-	result[8] = c;
-	result[9] = c >> 8;
-	result[10] = c >> 16;
-	result[11] = c >> 24;
-	result[12] = d;
-	result[13] = d >> 8;
-	result[14] = d >> 16;
-	result[15] = d >> 24;
+  __m128i a =_mm_add_epi32(a , 0x67452301);
+  __m128i b =_mm_add_epi32(b , 0xefcdab89);
+  __m128i c =_mm_add_epi32(c , 0x98badcfe);
+  __m128i d =_mm_add_epi32(d , 0x10325476);
+__m128i back[16];
+  back[0] = a;
+	back[1] = _mm_srli_epi32(a,8);
+	back[2] = _mm_srli_epi32(a,16);
+	back[3] = _mm_srli_epi32(a,24);
+	back[4] = b;
+	back[5] = _mm_srli_epi32(b,8);
+	back[6] = _mm_srli_epi32(b,16);
+	back[7] = _mm_srli_epi32(b,24);
+	back[8] = c;
+	back[9] = _mm_srli_epi32(c,8);
+	back[10] = _mm_srli_epi32(c,16);
+	back[11] = _mm_srli_epi32(c,24);
+	back[12] = d;
+	back[13] = _mm_srli_epi32(d,8);
+	back[14] = _mm_srli_epi32(d,16);
+	back[15] = _mm_srli_epi32(d,24);
+	for(int i=0;i<16;i++){
+	int* ptr=(int*)&back[i];
+	}
+	
 }
 
 int main(int argc, char **argv)
