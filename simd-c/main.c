@@ -11,10 +11,12 @@
 #define NUM_BUFFER 4
 #define PWD_LEN 6
 
+
 #define STEP(f, a, b, c, d, x, add, s)      \
-  (a) += f((b), (c), (d)) + ptr[x] + (add); \
-  (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s))));
-  
+  STEP1(f,a,b,c,d); 	\
+  STEP2(a,add); \
+  STEP3(a,x); \  
+  (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s)))); \
 #define STEP1(f,a,b,c,d)   \
   (a) =_mm_add_epi32((a),f((b), (c), (d)));
 #define STEP2(a,add)   \
@@ -26,6 +28,7 @@
 
 void mybody(unsigned char **buffer, unsigned char *result)
 {
+	//définition des 4 valeurs
     __m128i a = _mm_set1_epi32(0x67452301);
     __m128i b = _mm_set1_epi32(0xefcdab89);
     __m128i c = _mm_set1_epi32(0x98badcfe);
