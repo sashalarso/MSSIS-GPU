@@ -4,6 +4,7 @@
 
 #include "../includes/config.h"
 #include "md4.h"
+#include <sys/types.h>
 
 #define F(x, y, z) ((z) ^ ((x) & ((y) ^ (z))))
 #define G(x, y, z) (((x) & ((y) | (z))) | ((y) & (z)))
@@ -14,12 +15,9 @@
   (a) += f((b), (c), (d)) + ptr[x] + (add); \
   (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s))));
 
-void mybody(unsigned char *buffer, unsigned char *result)
+void mybody(unsigned char *buffer, uint32_t *result,uint32_t a,uint32_t b,uint32_t c,uint32_t d)
 {
-  uint32_t a = 0x67452301;
-  uint32_t b = 0xefcdab89;
-  uint32_t c = 0x98badcfe;
-  uint32_t d = 0x10325476;
+  
   uint32_t *ptr = buffer;
   STEP(F, a, b, c, d, 0, 0, 3)
   STEP(F, d, a, b, c, 1, 0, 7)
@@ -78,21 +76,9 @@ void mybody(unsigned char *buffer, unsigned char *result)
   c += 0x98badcfe;
   d += 0x10325476;
   result[0] = a;
-	result[1] = a >> 8;
-	result[2] = a >> 16;
-	result[3] = a >> 24;
-	result[4] = b;
-	result[5] = b >> 8;
-	result[6] = b >> 16;
-	result[7] = b >> 24;
-	result[8] = c;
-	result[9] = c >> 8;
-	result[10] = c >> 16;
-	result[11] = c >> 24;
-	result[12] = d;
-	result[13] = d >> 8;
-	result[14] = d >> 16;
-	result[15] = d >> 24;
+  result[1] = b;
+  result[2] = c;
+  result[3] = d;
 }
 
 void print_hex(const unsigned char *data, size_t length) {
@@ -134,10 +120,10 @@ int main(int argc, char **argv) {
   
   do {
     
-    MD4_CTX ctx;
-    unsigned char res[16];
     
-    mybody(candidate,res);
+    uint32_t res[4];
+    
+    mybody(candidate,res,0x67452301,0xefcdab89,0x98badcfe,0x10325476);
     tested++;
     if (memcmp(res, target, 16) == 0) {
       candidate[PWD_LEN]=0;
