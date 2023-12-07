@@ -1,30 +1,29 @@
 #include <stdio.h>
 #include <emmintrin.h>
+#include <smmintrin.h>
 #include "../includes/config.h"
 #include <stdint.h>
-#define F(x, y, z) ((z) ^ ((x) & ((y) ^ (z))))
-#define G(x, y, z) (((x) & ((y) | (z))) | ((y) & (z)))
-#define H(x, y, z) (((x) ^ (y)) ^ (z))
-#define H2(x, y, z) ((x) ^ ((y) ^ (z)))
+
+
+#define F(x,y,z) _mm_xor_si128(z,_mm_and_si128(x,_mm_xor_si128(y,z)))
+#define G(x,y,z) _mm_or_si128(_mm_and_si128(x,_mm_or_si128(y,z)),_mm_and_si128(y,z))
+#define H(x,y,z) _mm_xor_si128(_mm_xor_si128(x,y),z) 
+#define H2(x,y,z) _mm_xor_si128(x,_mm_xor_si128(y,z)) 
 
 #define NUM_M128 16
 #define NUM_BUFFER 4
 #define PWD_LEN 6
 
-
-#define STEP(f, a, b, c, d, x, add, s)      \
-  STEP1(f,a,b,c,d); 	\
-  STEP2(a,add); \
-  STEP3(a,x); \  
-  (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s)))); \
 #define STEP1(f,a,b,c,d)   \
   (a) =_mm_add_epi32((a),f((b), (c), (d)));
-#define STEP2(a,add)   \
-  (a) =_mm_add_epi32((a),_mm_set1_epi32(add)); 
-#define STEP3(a,x) \
-  __m128i xs=_mm_set1_epi32(ptr[0][x],ptr[1][x],ptr[2][x],ptr[3][x]);   \
-  (a) =_mm_add_epi32((a),(xs));
-  	
+#define STEP2(a,add)  (a) =_mm_add_epi32((a),_mm_set1_epi32(add)); 
+#define STEP3(a,x)   (a) =_mm_add_epi32((a),_mm_set_epi32(ptr[0][x],ptr[1][x],ptr[2][x],ptr[3][x]));
+#define STEP4(a,s)\
+  (a)=_mm_or_si128(_mm_slli_epi32((a),(s)),_mm_srli_epi32(_mm_and_si128((a),_mm_set1_epi32(0xffffffff)),32-(s)));\
+
+#define STEP(f, a, b, c, d, x, add, s)      \
+  STEP1(f,a,b,c,d);STEP2(a,add);STEP3(a,x);STEP4((a),(s)); \
+ 	
 
 void mybody(unsigned char **buffer, unsigned char *result)
 {
@@ -35,6 +34,9 @@ void mybody(unsigned char **buffer, unsigned char *result)
     __m128i d = _mm_set1_epi32(0x10325476);
     
    uint32_t **ptr = buffer;
+ 
+  
+    
   STEP(F, a, b, c, d, 0, 0, 3)
   STEP(F, d, a, b, c, 1, 0, 7)
   STEP(F, c, d, a, b, 2, 0, 11)
@@ -87,30 +89,20 @@ void mybody(unsigned char **buffer, unsigned char *result)
   STEP(H2, d, a, b, c, 11, 0x6ed9eba1, 9)
   STEP(H, c, d, a, b, 7, 0x6ed9eba1, 11)
   STEP(H2, b, c, d, a, 15, 0x6ed9eba1, 15)
-  __m128i a =_mm_add_epi32(a , 0x67452301);
-  __m128i b =_mm_add_epi32(b , 0xefcdab89);
-  __m128i c =_mm_add_epi32(c , 0x98badcfe);
-  __m128i d =_mm_add_epi32(d , 0x10325476);
-__m128i back[16];
+  a =_mm_add_epi32(a , _mm_set1_epi32(0x67452301));
+  b =_mm_add_epi32(b , _mm_set1_epi32(0xefcdab89));
+  c =_mm_add_epi32(c , _mm_set1_epi32(0x98badcfe));
+  d =_mm_add_epi32(d , _mm_set1_epi32(0x10325476));
+__m128i back[4];
   back[0] = a;
-	back[1] = _mm_srli_epi32(a,8);
-	back[2] = _mm_srli_epi32(a,16);
-	back[3] = _mm_srli_epi32(a,24);
-	back[4] = b;
-	back[5] = _mm_srli_epi32(b,8);
-	back[6] = _mm_srli_epi32(b,16);
-	back[7] = _mm_srli_epi32(b,24);
-	back[8] = c;
-	back[9] = _mm_srli_epi32(c,8);
-	back[10] = _mm_srli_epi32(c,16);
-	back[11] = _mm_srli_epi32(c,24);
-	back[12] = d;
-	back[13] = _mm_srli_epi32(d,8);
-	back[14] = _mm_srli_epi32(d,16);
-	back[15] = _mm_srli_epi32(d,24);
-	for(int i=0;i<16;i++){
-	int* ptr=(int*)&back[i];
-	}
+	back[1] = b;
+	back[2] = c;
+	back[3] = d;
+	
+	
+ 
+  
+  
 	
 }
 
@@ -132,7 +124,8 @@ int main(int argc, char **argv)
   candidate1[56]=PWD_LEN*8;
   memset(candidate1, '!', PWD_LEN);
   candidate1[PWD_LEN]=0x80;
-  for(int i=0;i<NUM_BUFFER;i++){
+  /*
+    for(int i=0;i<NUM_BUFFER;i++){
     for(int j=0;j<64;j++){
       
       bufferArray[i][j]=candidate1[j];
@@ -148,26 +141,45 @@ int main(int argc, char **argv)
     printf("\n");
     
   }
+  */
+ size_t tested = 0;
+  struct timeval tval;
+  double start;
+  double now;
+
+  gettimeofday(&tval, NULL);
+  start = tval.tv_sec + tval.tv_usec / 1000000.0;
    do {
     
+    tested=tested+4;
+    unsigned char res[4];
     
-    unsigned char res[16];
     for(int i=0;i<NUM_BUFFER;i++){
     for(int j=0;j<64;j++){
     bufferArray[i][j]=candidate1[j];
-      printf("%02x", (unsigned char)bufferArray[i][j]);
-      
-      
+     
+           
     }
     incr_candidate(candidate1);
-    printf("\n");
+   
     
   }
+  if (tested % (1024 * 1024 * 32) == 0) {
+      gettimeofday(&tval, NULL);
+      now = tval.tv_sec + tval.tv_usec / 1000000.0;
+      double speed = tested / (now - start);
+      fprintf(stderr, "%.3f M/s\n", speed / 1000000.0);
+    }
+  
+  
+  mybody(bufferArray,res);
+  
     
     
     
     
   } while (incr_candidate(bufferArray[0]));
+  
   
   
     
